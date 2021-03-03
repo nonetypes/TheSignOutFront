@@ -11,10 +11,10 @@ class Student:
     """
     drive_by_time is in seconds with a normal distribution standard deviation of 5.
     """
-    def __init__(self, number, drive_by_time=60, drive_by_num=4):
+    def __init__(self, number, drive_by_time=60, views_per_week=4):
         self.number = number
         self.drive_by_time = int(random.normal(drive_by_time, 5))
-        self.drive_by_num = drive_by_num
+        self.views_per_week = views_per_week
         self.slides_seen = {}
         self.slide_seen = False
         self.view_time = 0
@@ -54,33 +54,14 @@ class Sign:
 class SignViewingSimulator:
     """a
     """
-    def __init__(self, sign, list_of_students):
+    def __init__(self, sign, list_of_students, duration_in_weeks):
         self.sign = sign
         self.students = list_of_students
+        self.weeks = duration_in_weeks
         self.schedule = []
-        self.results = {}
+        self.results = {'Students': {}, 'Averages': {}}
 
-    def create_schedule(self, days, total_views_per_student):
-        """Randomly create a schedule populated with students and Nones to 
-        represent a schedule made up of seconds.
-
-        Students in the schedule represent moments where they arrive on the road.
-        Nones represent a second in the schedule where no one entered the road.
-
-        Student arrival times are completely randomized.
-        """
-        self.schedule = []
-        run_time = 60 * 60 * 24 * days
-        # Add all Nones.
-        for i in range(run_time - (len(self.students) * total_views_per_student)):
-            self.schedule.append(None)
-        # Add students x number of times to the schedule. x = total_views
-        for view in range(total_views_per_student):
-            for student in self.students:
-                self.schedule.append(student)
-        shuffle(self.schedule)
-
-    def create_smart_schedule(self, weeks, views_per_week, sd=300):
+    def create_schedule(self, sd=300):
         """Only simultates weeks at a time.
 
         Attempt to create a "realistic" schedule where students are randomly assigned
@@ -112,7 +93,7 @@ class SignViewingSimulator:
                           61200, 64800, 68400, 72000, 75600, 79200]]
             # Assign which days a student will arrive every week.
             student_days = []
-            for i in range(views_per_week):
+            for i in range(student.views_per_week):
                 day = choice([1, 2, 3, 4, 5, 6, 7])
                 student_days.append(day)
             student_days.sort()
@@ -131,7 +112,7 @@ class SignViewingSimulator:
                 student.schedule.append(time * day)
 
         # Create simulation schedule.
-        for week in range(weeks):
+        for week in range(self.weeks):
             schedule = []
             # Fill up the week with Nones.
             for second in range(60 * 60 * 24 * 7):
@@ -204,7 +185,6 @@ class SignViewingSimulator:
         unique_slides_viewed = 0
         num_of_slides_viewed = 0
         per_of_slides_viewed = 0
-        self.results['Students'] = {}
         for student in self.students:
             self.results['Students'][student] = {}
             self.results['Students'][student]['Unique Slides Viewed'] = len(student.slides_seen)
@@ -216,6 +196,6 @@ class SignViewingSimulator:
             per_of_slides_viewed += self.results['Students'][student]['% of Slides Viewed']
             num_of_slides_viewed += self.results['Students'][student]['Total Slides Viewed']
             unique_slides_viewed += self.results['Students'][student]['Unique Slides Viewed']
-        self.results['Average Unique Slides Viewed'] = round(unique_slides_viewed / len(self.students), 2)
-        self.results['Average # of Slides Viewed'] = round(num_of_slides_viewed / len(self.students), 2)
-        self.results['Average % of Slides Viewed'] = round(per_of_slides_viewed / len(self.students), 2)
+        self.results['Averages']['Average Unique Slides Viewed'] = round(unique_slides_viewed / len(self.students), 2)
+        self.results['Averages']['Average # of Slides Viewed'] = round(num_of_slides_viewed / len(self.students), 2)
+        self.results['Averages']['Average % of Slides Viewed'] = round(per_of_slides_viewed / len(self.students), 2)
