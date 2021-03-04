@@ -1,13 +1,15 @@
+# GUI for TheSignOutFront
+# SimulatorWindow
 
 import tkinter as tk
 from threading import Thread
 from json import loads, dumps
-from time import time, sleep
+from time import time
 from classes import Sign, Student, SignViewingSimulator
 
 
 class SignSimulatorWindow:
-    """Tkinter window for entering simulation values and running simulations.
+    """Tkinter window for entering simulation parameters and running simulations.
     """
     def __init__(self):
         self.window = tk.Tk()
@@ -70,25 +72,27 @@ class SignSimulatorWindow:
         # Simulation Frame
         self.simulation_frame = tk.LabelFrame(self.window, text='Simulation')
         self.simulation_frame.grid(row=2, column=0, padx=4, pady=4, columnspan=2, sticky='w')
-        # Simulation Number
-        self.simulation_num_label = tk.Label(self.simulation_frame, text='Number of Simulations',
-                                             width=self.label_width, anchor='w')
-        self.simulation_num_label.grid(row=0, column=0, padx=self.padx, pady=self.pady, sticky='w')
-        self.simulation_num_entry = tk.Entry(self.simulation_frame, width=self.entry_width,
-                                             validate='key', validatecommand=(vcmd, '%P'))
-        self.simulation_num_entry.grid(row=0, column=1, padx=self.padx, pady=self.pady, sticky='w')
         # Simulation Length
         self.simulation_time_label = tk.Label(self.simulation_frame, text='Duration in Weeks',
                                               width=self.label_width, anchor='w')
-        self.simulation_time_label.grid(row=1, column=0, padx=self.padx, pady=self.pady, sticky='w')
+        self.simulation_time_label.grid(row=0, column=0, padx=self.padx, pady=self.pady, sticky='w')
         self.simulation_time_entry = tk.Entry(self.simulation_frame, width=self.entry_width,
                                               validate='key', validatecommand=(vcmd, '%P'))
-        self.simulation_time_entry.grid(row=1, column=1, padx=self.padx, pady=self.pady, sticky='w')
+        self.simulation_time_entry.grid(row=0, column=1, padx=self.padx, pady=self.pady, sticky='w')
+        # Simulation Number
+        self.simulation_num_label = tk.Label(self.simulation_frame, text='Number of Simulations',
+                                             width=self.label_width, anchor='w')
+        self.simulation_num_label.grid(row=1, column=0, padx=self.padx, pady=self.pady, sticky='w')
+        self.simulation_num_entry = tk.Entry(self.simulation_frame, width=self.entry_width,
+                                             validate='key', validatecommand=(vcmd, '%P'))
+        self.simulation_num_entry.grid(row=1, column=1, padx=self.padx, pady=self.pady, sticky='w')
 
         # Run Simulation Button
         # self.run() is threaded to allow real-time status updates e.g. when running many simulations.
         self.simulation_run_button = tk.Button(self.window, text='Run', width=8, command=self.start_thread)
         self.simulation_run_button.grid(row=3, column=0, padx=self.padx, pady=self.pady, columnspan=2, sticky='n')
+        # Bind Run to enter key.
+        self.window.bind('<Return>', self.enter_key)
 
         # Status Label
         self.status_label = tk.Label(self.window)
@@ -115,11 +119,21 @@ class SignSimulatorWindow:
         """
         self.get_entries()
 
+        simulation_string = f"{self.entries['simulation_num']} Simulation"
+        simulation_string += ':' if self.entries['simulation_num'] == 1 else 's:'
+        print(simulation_string)
+
+        simulations = {'Average Unique Slides Viewed': [],
+                       'Average # of Slides Viewed': [],
+                       'Average % of Slides Viewed': []}
+
         sign = Sign(self.entries['slide_num'], self.entries['slide_duration'])
 
         # Run n number of simulations
         for n in range(self.entries['simulation_num']):
+            # Update status message.
             self.status_label.configure(text=f'Running Simulation {n+1}')
+            print(f'Running Simulation {n+1}', end='\r')
             # Create Students
             students = []
             for i in range(self.entries['student_num']):
@@ -130,18 +144,26 @@ class SignSimulatorWindow:
             simulation.simulate()
             simulation.calculate_results()
 
-            # for key, val in simulation.results['Averages'].items():
-            #     print(f'{key}: {val}')
+            for key, val in simulation.results['Averages'].items():
+                simulations[key].append(val)
+
+        # Print average results across any/all simulations.
+        for key, val in simulations.items():
+            print(f'{key}: {round((sum(val) / len(val)), 2)}')
+
+        # for student in students:
+            # print(student.arrival_times)
+            # print(student.slides_seen)
 
         self.status_label.configure(text='Simulations Complete')
 
     def start_thread(self):
-        """Execute self.run() when the "Run" button is pressed.
+        """Execute run() when the "Run" button is pressed.
 
-        self.run() is threaded to allow real-time updating of status messages.
+        run() is threaded to allow real-time updating of status messages.
 
-        While self.run() is running, disable "Run" button with
-        self.check_thread() until simulations are complete.
+        While run() is running, disable "Run" button with
+        check_thread() until simulations are complete.
 
         https://stackoverflow.com/a/56953613
         """
@@ -157,13 +179,20 @@ class SignSimulatorWindow:
         If the thread is active, call check_thread() again after .5 seconds.
         """
         if thread.is_alive():
-            self.simulation_run_button.configure(command=lambda: print('Wait till simulations are complete!'))
+            self.simulation_run_button.configure(command=lambda: print('Simulations in Progress'))
+            self.window.unbind('<Return>')
             self.window.after(500, lambda: self.check_thread(thread))
         else:
             self.simulation_run_button.configure(command=self.start_thread)
+            self.window.bind('<Return>', self.enter_key)
+
+    def enter_key(self, event):
+        """For binding the enter key to start_thread() and ultimately run().
+        """
+        self.start_thread()
 
     def get_entries(self):
-        """Retrieve the entries from the entry boxes.
+        """Retrieve and store the entries from the entry boxes.
         """
         entries = {}
         entries['slide_num'] = self.sign_num_entry.get()
@@ -174,8 +203,13 @@ class SignSimulatorWindow:
         entries['simulation_num'] = self.simulation_num_entry.get()
         entries['simulation_duration'] = self.simulation_time_entry.get()
 
+        # Typecast to integers.
         for key, val in entries.items():
-            entries[key] = int(val)
+            # If there was no entry, set it to 1.
+            if not entries[key]:
+                entries[key] = 1
+            else:
+                entries[key] = int(val)
 
         self.entries = entries
 
@@ -186,7 +220,7 @@ class SignSimulatorWindow:
             settings = loads(open('settings', 'r').read())
         except Exception:
             print('No settings file found.')
-        if settings:
+        else:
             self.sign_num_entry.insert(0, str(settings['slide_num']))
             self.sign_time_entry.insert(0, str(settings['slide_duration']))
             self.students_num_entry.insert(0, str(settings['student_num']))

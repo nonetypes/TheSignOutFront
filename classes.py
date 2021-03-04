@@ -1,15 +1,39 @@
-# TheSignOutFront by nonetypes
-# Last Revised on 03/01/2021
-# Sign viewing simulator
+# Contains Classes for TheSignOutFront
+# Student, Sign, SignViewingSimulator
 
-from random import choice, shuffle, randint
+from random import choice, randint
 from numpy import random
 from linkedlist import LinkedList
 
 
+def convert_time(time_in_seconds):
+    """
+    Convert seconds to a string of '2, Mon, 14:52:23'
+    """
+    day = 60 * 60 * 24
+    week = day * 7
+    days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+    output = ''
+    # Week
+    output += str((time_in_seconds//week) + 1)+', '
+    time_in_seconds = time_in_seconds % week
+    # Day
+    output += days[time_in_seconds//day]+', '
+    time_in_seconds = time_in_seconds % day
+    # Hour
+    output += str(int(time_in_seconds / 3600)).zfill(2)+':'
+    # Minutes
+    output += str(int(time_in_seconds / 60 % 60)).zfill(2)+':'
+    # Seconds
+    output += str(int(time_in_seconds % 60)).zfill(2)
+
+    return output
+
+
 class Student:
     """
-    drive_by_time is in seconds with a normal distribution standard deviation of 5.
+    drive_by_time is in seconds with a normal distribution standard deviation of 5
+    to simulate variance in driving speeds.
     """
     def __init__(self, number, drive_by_time=60, views_per_week=4):
         self.number = number
@@ -20,15 +44,16 @@ class Student:
         self.view_time = 0
         self.time_on_road = 0
         self.schedule = {}
-        self.arrival_times = {}
+        self.arrival_times = []
 
     def __repr__(self):
         return str(self.number)
 
     def view_slide(self, slide):
+        """Students will only "see" slides if they are able to view them for
+        at least 3 seconds.
         """
-        """
-        if self.view_time >= 5 and not self.slide_seen:
+        if self.view_time >= 3 and not self.slide_seen:
             self.slide_seen = True
             if slide not in self.slides_seen:
                 self.slides_seen[slide] = 1
@@ -37,8 +62,7 @@ class Student:
 
 
 class Sign:
-    """
-    time_per_slide is in seconds
+    """time_per_slide is in seconds
     """
     def __init__(self, num_of_slides, time_per_slide):
         self.num_of_slides = num_of_slides
@@ -52,7 +76,7 @@ class Sign:
 
 
 class SignViewingSimulator:
-    """a
+    """
     """
     def __init__(self, sign, list_of_students, duration_in_weeks):
         self.sign = sign
@@ -87,29 +111,34 @@ class SignViewingSimulator:
             # Day:   32400 - 57600 (09:00 - 16:00)
             # Night: 61200 - 79200 (17:00 - 22:00)
             # Mix:   32400 - 79200 (09:00 - 22:00)
-            schedules = [[32400, 36000, 38600, 43200, 46800, 50400, 54000, 57600],
-                         [61200, 64800, 68400, 72000, 75600, 79200],
-                         [32400, 36000, 38600, 43200, 46800, 50400, 54000, 57600,
-                          61200, 64800, 68400, 72000, 75600, 79200]]
+            daytime = [32400, 36000, 39600, 43200, 46800, 50400, 54000, 57600]
+            nighttime = [61200, 64800, 68400, 72000, 75600, 79200]
+            mix = daytime + nighttime
             # Assign which days a student will arrive every week.
             student_days = []
+            weekdays = [1, 2, 3, 4, 5, 6, 7]
             for i in range(student.views_per_week):
-                day = choice([1, 2, 3, 4, 5, 6, 7])
+                if weekdays:
+                    day = choice(weekdays)
+                    # Don't pick the same day twice.
+                    weekdays.remove(day)
+                # If the student is visiting more than 7 days/week:
+                else:
+                    day = choice([1, 2, 3, 4, 5, 6, 7])
                 student_days.append(day)
             student_days.sort()
             # Create arrival times in seconds of a week. These serve as times
             # to aim for but will vary by several minutes from week to week.
             student.schedule = []
-            arrival_times = choice(schedules)
+            arrival_times = choice([daytime, nighttime, mix])
             for day in student_days:
-                if arrival_times:
+                if len(student_days) <= 7:
                     time = choice(arrival_times)
-                    # Don't pick the same time twice.
-                    # arrival_times.remove(time)
-                # If there is no available hour, choose a time randomly.
+                # If visiting more than 7 times/week, choose a random time.
                 else:
                     time = randint(0, 86399)
-                student.schedule.append(time * day)
+                # Convert to time in seconds of the week.
+                student.schedule.append(time + ((day - 1) * 86400))
 
         # Create simulation schedule.
         for week in range(self.weeks):
@@ -128,14 +157,14 @@ class SignViewingSimulator:
                     if new_time >= 604800:
                         new_time = time
                     # Make sure the time slot is not already taken.
-                    if schedule[new_time] is None:
-                        schedule[new_time] = student
-                    # Another student was in the schedule -- avoid conflict.
-                    else:
-                        # Move forward in schedule until there isn't a student.
-                        while schedule[new_time] is not None:
-                            new_time += 1
-                        schedule[new_time] = student
+                    # Move forward in schedule until there isn't a student.
+                    while schedule[new_time] is not None:
+                        new_time += 1
+                        # If time moves into next week, reset time.
+                        if new_time >= 604800:
+                            new_time = 0
+                    schedule[new_time] = student
+                # print(student, end='\r')
             self.schedule += schedule
 
     def simulate(self, random_slides=False):
@@ -148,17 +177,19 @@ class SignViewingSimulator:
 
         current_slide = self.sign.slides.head
         road = []
-        seconds = 0
-        for item in self.schedule:
+        # seconds = 0
+        for second in range(len(self.schedule)):
 
             # Add students to road.
-            if item is not None:
-                road.append(item)
+            if self.schedule[second] is not None:
+                road.append(self.schedule[second])
+                # Store arrival time.
+                self.schedule[second].arrival_times.append(convert_time(second))
 
             for student in road:
                 student.time_on_road += 1
                 student.view_time += 1
-                # Students will only "see" the slide if they've been viewing it for at least 5 seconds.
+                # Students will only "see" the slide if they've been viewing it for at least 3 seconds.
                 student.view_slide(current_slide)
                 # Students leaving road:
                 if student.time_on_road >= student.drive_by_time:
@@ -168,20 +199,23 @@ class SignViewingSimulator:
                     road.remove(student)
 
             # Change slides every x seconds (time_per_slide)
-            if seconds != 0 and not seconds % self.sign.time_per_slide:
+            if second != 0 and not second % self.sign.time_per_slide:
                 if random_slides:
                     slides_choices = slides[:]
+                    # Don't choose the same slide two times in a row.
                     slides_choices.remove(current_slide)
                     current_slide = choice(slides_choices)
                 else:
                     current_slide = current_slide.next_node
                 for student in road:
-                    student.slide_seen = False
                     student.view_time = 0
+                    student.slide_seen = False
 
-            seconds += 1
+            # seconds += 1
 
     def calculate_results(self):
+        """
+        """
         unique_slides_viewed = 0
         num_of_slides_viewed = 0
         per_of_slides_viewed = 0
