@@ -6,30 +6,6 @@ from numpy import random
 from linkedlist import LinkedList
 
 
-def convert_time(time_in_seconds):
-    """
-    Convert seconds to a string of '2, Mon, 14:52:23'
-    """
-    day = 60 * 60 * 24
-    week = day * 7
-    days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-    output = ''
-    # Week
-    output += str((time_in_seconds//week) + 1)+', '
-    time_in_seconds = time_in_seconds % week
-    # Day
-    output += days[time_in_seconds//day]+', '
-    time_in_seconds = time_in_seconds % day
-    # Hour
-    output += str(int(time_in_seconds / 3600)).zfill(2)+':'
-    # Minutes
-    output += str(int(time_in_seconds / 60 % 60)).zfill(2)+':'
-    # Seconds
-    output += str(int(time_in_seconds % 60)).zfill(2)
-
-    return output
-
-
 class Student:
     """
     drive_by_time is in seconds with a normal distribution standard deviation of 5
@@ -51,18 +27,45 @@ class Student:
 
     def view_slide(self, slide):
         """Students will only "see" slides if they are able to view them for
-        at least 3 seconds.
+        at least 2 seconds.
         """
-        if self.view_time >= 3 and not self.slide_seen:
+        if self.view_time >= 2 and not self.slide_seen:
             self.slide_seen = True
             if slide not in self.slides_seen:
                 self.slides_seen[slide] = 1
             else:
                 self.slides_seen[slide] += 1
 
+    def get_arrival_time(self, time_in_seconds):
+        """Convert seconds to a string of '2, Mon, 14:52:23'
+
+        Add it to self.arrival_times.
+        """
+        day = 60 * 60 * 24
+        week = day * 7
+        days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+        output = ''
+        # Week
+        output += str((time_in_seconds//week) + 1)+', '
+        time_in_seconds = time_in_seconds % week
+        # Day
+        output += days[time_in_seconds//day]+', '
+        time_in_seconds = time_in_seconds % day
+        # Hour
+        output += str(int(time_in_seconds / 3600)).zfill(2)+':'
+        # Minutes
+        output += str(int(time_in_seconds / 60 % 60)).zfill(2)+':'
+        # Seconds
+        output += str(int(time_in_seconds % 60)).zfill(2)
+
+        self.arrival_times.append(output)
+
 
 class Sign:
-    """time_per_slide is in seconds
+    """Contains a circular LinkedList representing slides which
+    display in a loop.
+
+    time_per_slide is in seconds
     """
     def __init__(self, num_of_slides, time_per_slide):
         self.num_of_slides = num_of_slides
@@ -76,7 +79,10 @@ class Sign:
 
 
 class SignViewingSimulator:
-    """
+    """Simulator class.
+
+    Create schedules for students and a schedule for the simulation itself.
+    Run simulation and calculate results.
     """
     def __init__(self, sign, list_of_students, duration_in_weeks):
         self.sign = sign
@@ -91,15 +97,15 @@ class SignViewingSimulator:
         Attempt to create a "realistic" schedule where students are randomly assigned
         one of three schedule types:
 
-        Day: They only ever arrive during daylight hours.
-        Night: They only ever arrive during evening hours.
-        Mix: They arrive during the day or evening.
+        Day: They arrive for classes during daylight hours.
+        Night: They arrive for classes during evening hours.
+        Mix: They arrive for classes during the day or evening.
 
         Students will be assigned times on the hour of specific days in which they will arrive.
         This will be consistent week to week but they will likely arrive early
         or late with a normal distribution standard deviation of 5 minutes.
 
-        If students will be coming to campus more than available classes, a time is
+        If students will be coming to campus more than 7 times per week, a time is
         chosen randomly, but this time will be consistent week to week.
         """
         self.schedule = []
@@ -108,9 +114,9 @@ class SignViewingSimulator:
         for student in self.students:
             # Day, night, mix schedules are represented by a list of possible
             # arrival times in seconds of a day on the hour.
-            # Day:   32400 - 57600 (09:00 - 16:00)
-            # Night: 61200 - 79200 (17:00 - 22:00)
-            # Mix:   32400 - 79200 (09:00 - 22:00)
+            # daytime:   32400 - 57600 (09:00 - 16:00)
+            # nighttime: 61200 - 79200 (17:00 - 22:00)
+            # mix:       32400 - 79200 (09:00 - 22:00)
             daytime = [32400, 36000, 39600, 43200, 46800, 50400, 54000, 57600]
             nighttime = [61200, 64800, 68400, 72000, 75600, 79200]
             mix = daytime + nighttime
@@ -140,7 +146,7 @@ class SignViewingSimulator:
                 # Convert to time in seconds of the week.
                 student.schedule.append(time + ((day - 1) * 86400))
 
-        # Create simulation schedule.
+        # Create schedule of simulation.
         for week in range(self.weeks):
             schedule = []
             # Fill up the week with Nones.
@@ -164,11 +170,14 @@ class SignViewingSimulator:
                         if new_time >= 604800:
                             new_time = 0
                     schedule[new_time] = student
-                # print(student, end='\r')
             self.schedule += schedule
 
     def simulate(self, random_slides=False):
-        """
+        """Run simulation.
+
+        Step through each second in self.schedule and add students to the road.
+        Slides change every x seconds.
+        Students in the road see a slide if seen for at least 2 seconds.
         """
         if random_slides:
             slides = []
@@ -177,19 +186,18 @@ class SignViewingSimulator:
 
         current_slide = self.sign.slides.head
         road = []
-        # seconds = 0
         for second in range(len(self.schedule)):
 
             # Add students to road.
             if self.schedule[second] is not None:
                 road.append(self.schedule[second])
                 # Store arrival time.
-                self.schedule[second].arrival_times.append(convert_time(second))
+                self.schedule[second].get_arrival_time(second)
 
             for student in road:
                 student.time_on_road += 1
                 student.view_time += 1
-                # Students will only "see" the slide if they've been viewing it for at least 3 seconds.
+                # Students will only "see" the slide if they've been viewing it for at least 2 seconds.
                 student.view_slide(current_slide)
                 # Students leaving road:
                 if student.time_on_road >= student.drive_by_time:
@@ -211,10 +219,9 @@ class SignViewingSimulator:
                     student.view_time = 0
                     student.slide_seen = False
 
-            # seconds += 1
-
     def calculate_results(self):
-        """
+        """Tally the results based on slides seen by all students.
+        Store results in self.results.
         """
         unique_slides_viewed = 0
         num_of_slides_viewed = 0
@@ -226,7 +233,8 @@ class SignViewingSimulator:
             for times_seen in student.slides_seen.values():
                 total_viewed += times_seen
             self.results['Students'][student]['Total Slides Viewed'] = total_viewed
-            self.results['Students'][student]['% of Slides Viewed'] = round((len(student.slides_seen) / self.sign.num_of_slides) * 100, 2)
+            student_per_slides_viewed = round((len(student.slides_seen) / self.sign.num_of_slides) * 100, 2)
+            self.results['Students'][student]['% of Slides Viewed'] = student_per_slides_viewed
             per_of_slides_viewed += self.results['Students'][student]['% of Slides Viewed']
             num_of_slides_viewed += self.results['Students'][student]['Total Slides Viewed']
             unique_slides_viewed += self.results['Students'][student]['Unique Slides Viewed']

@@ -1,10 +1,9 @@
-# GUI for TheSignOutFront
-# SimulatorWindow
+# Tkinter GUI for TheSignOutFront
+# SignSimulatorWindow
 
 import tkinter as tk
 from threading import Thread
 from json import loads, dumps
-from time import time
 from classes import Sign, Student, SignViewingSimulator
 
 
@@ -127,7 +126,7 @@ class SignSimulatorWindow:
                        'Average # of Slides Viewed': [],
                        'Average % of Slides Viewed': []}
 
-        sign = Sign(self.entries['slide_num'], self.entries['slide_duration'])
+        sign = Sign(self.entries['slide_num'], self.entries['slide_time'])
 
         # Run n number of simulations
         for n in range(self.entries['simulation_num']):
@@ -137,9 +136,9 @@ class SignSimulatorWindow:
             # Create Students
             students = []
             for i in range(self.entries['student_num']):
-                students.append(Student(i+1, self.entries['student_duration'], self.entries['student_views']))
+                students.append(Student(i+1, self.entries['student_time'], self.entries['student_views']))
 
-            simulation = SignViewingSimulator(sign, students, self.entries['simulation_duration'])
+            simulation = SignViewingSimulator(sign, students, self.entries['simulation_time'])
             simulation.create_schedule()
             simulation.simulate()
             simulation.calculate_results()
@@ -155,7 +154,10 @@ class SignSimulatorWindow:
             # print(student.arrival_times)
             # print(student.slides_seen)
 
-        self.status_label.configure(text='Simulations Complete')
+        if self.entries['simulation_num'] == 1:
+            self.status_label.configure(text='Simulation Complete')
+        else:
+            self.status_label.configure(text='Simulations Complete')
 
     def start_thread(self):
         """Execute run() when the "Run" button is pressed.
@@ -194,22 +196,44 @@ class SignSimulatorWindow:
     def get_entries(self):
         """Retrieve and store the entries from the entry boxes.
         """
+        # Put tkinter entry boxes in dictionary to be easily called.
+        entry_boxes = {}
+        entry_boxes['slide_num'] = self.sign_num_entry
+        entry_boxes['slide_time'] = self.sign_time_entry
+        entry_boxes['student_num'] = self.students_num_entry
+        entry_boxes['student_time'] = self.students_time_entry
+        entry_boxes['student_views'] = self.students_views_entry
+        entry_boxes['simulation_num'] = self.simulation_num_entry
+        entry_boxes['simulation_time'] = self.simulation_time_entry
+
+        # Collect user entries.
         entries = {}
-        entries['slide_num'] = self.sign_num_entry.get()
-        entries['slide_duration'] = self.sign_time_entry.get()
-        entries['student_num'] = self.students_num_entry.get()
-        entries['student_duration'] = self.students_time_entry.get()
-        entries['student_views'] = self.students_views_entry.get()
-        entries['simulation_num'] = self.simulation_num_entry.get()
-        entries['simulation_duration'] = self.simulation_time_entry.get()
+        for key, val in entry_boxes.items():
+            entries[key] = val.get()
 
         # Typecast to integers.
         for key, val in entries.items():
             # If there was no entry, set it to 1.
-            if not entries[key]:
+            if not val or int(val) == 0:
                 entries[key] = 1
+                # Reflect changes in entry box.
+                entry_boxes[key].delete(0, 'end')
+                entry_boxes[key].insert(0, 1)
             else:
                 entries[key] = int(val)
+
+        # Limitation on number of students/views per week to avoid infinite
+        # loops when creating simulation schedule.
+        if entries['student_num'] * entries['student_views'] >= 600_000:
+            if entries['student_num'] > 10000:
+                entries['student_num'] = 10000
+                self.students_num_entry.delete(0, 'end')
+                # Delete old entry box entry and update it.
+                self.students_num_entry.insert(0, str(10000))
+            if entries['student_views'] > 10:
+                entries['student_views'] = 10
+                self.students_views_entry.delete(0, 'end')
+                self.students_views_entry.insert(0, str(100))
 
         self.entries = entries
 
@@ -222,12 +246,12 @@ class SignSimulatorWindow:
             print('No settings file found.')
         else:
             self.sign_num_entry.insert(0, str(settings['slide_num']))
-            self.sign_time_entry.insert(0, str(settings['slide_duration']))
+            self.sign_time_entry.insert(0, str(settings['slide_time']))
             self.students_num_entry.insert(0, str(settings['student_num']))
-            self.students_time_entry.insert(0, str(settings['student_duration']))
+            self.students_time_entry.insert(0, str(settings['student_time']))
             self.students_views_entry.insert(0, str(settings['student_views']))
             self.simulation_num_entry.insert(0, str(settings['simulation_num']))
-            self.simulation_time_entry.insert(0, str(settings['simulation_duration']))
+            self.simulation_time_entry.insert(0, str(settings['simulation_time']))
 
     def save_settings(self):
         """Save the last retrieved entries entered in entry boxes to settings file.
