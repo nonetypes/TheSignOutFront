@@ -1,9 +1,28 @@
 # Contains Classes for TheSignOutFront
 # Student, Sign, SignViewingSimulator
 
-from random import choice, randint
+from random import choice, randint, shuffle
 from numpy import random
 from linkedlist import LinkedList
+
+
+class Sign:
+    """Contains a circular LinkedList representing slides which
+    display in a loop.
+
+    time_per_slide is in seconds.
+    """
+    def __init__(self, num_of_slides, time_per_slide):
+        self.num_of_slides = num_of_slides
+        self.time_per_slide = time_per_slide
+
+        # Populate slides.
+        self.slides = LinkedList()
+        for i in range(num_of_slides):
+            self.slides.append(f'Slide {i+1}')
+
+        # Turn sign into a circle.
+        self.slides[-1].next_node = self.slides[0]
 
 
 class Student:
@@ -11,15 +30,15 @@ class Student:
     drive_by_time is in seconds with a normal distribution standard deviation of 5
     to simulate variance in driving speeds.
     """
-    def __init__(self, number, drive_by_time=60, views_per_week=4):
+    def __init__(self, number, drive_by_time=60, drive_by_time_sd=5, views_per_week=4):
         self.number = number
-        self.drive_by_time = int(random.normal(drive_by_time, 5))
+        self.drive_by_time = int(random.normal(drive_by_time, drive_by_time_sd))
         self.views_per_week = views_per_week
-        self.slides_seen = {}
-        self.slide_seen = False
         self.view_time = 0
         self.time_on_road = 0
-        self.schedule = {}
+        self.slide_seen = False
+        self.slides_seen = {}
+        self.schedule = []
         self.arrival_times = []
 
     def __repr__(self):
@@ -37,7 +56,9 @@ class Student:
                 self.slides_seen[slide] += 1
 
     def get_arrival_time(self, time_in_seconds):
-        """Convert seconds to a string of '2, Mon, 14:52:23'
+        """For confirmation that student schedules are functioning as intended.
+
+        Convert seconds to a string of '2, Mon, 14:52:23' (week, day, time)
 
         Add it to self.arrival_times.
         """
@@ -61,23 +82,6 @@ class Student:
         self.arrival_times.append(output)
 
 
-class Sign:
-    """Contains a circular LinkedList representing slides which
-    display in a loop.
-
-    time_per_slide is in seconds
-    """
-    def __init__(self, num_of_slides, time_per_slide):
-        self.num_of_slides = num_of_slides
-        self.time_per_slide = time_per_slide
-        # Populate slides.
-        self.slides = LinkedList()
-        for i in range(num_of_slides):
-            self.slides.append(f'Slide {i+1}')
-        # Turn sign into a circle.
-        self.slides[-1].next_node = self.slides[0]
-
-
 class SignViewingSimulator:
     """Simulator class.
 
@@ -91,7 +95,27 @@ class SignViewingSimulator:
         self.schedule = []
         self.results = {'Students': {}, 'Averages': {}}
 
-    def create_schedule(self, sd=300):
+    def create_random_schedule(self):
+        """Create a completely randomized schedule.
+
+        Warning: Students may have a greater chance to appear on the road with themselves.
+        """
+        self.schedule = []
+        run_time = 60 * 60 * 24 * 7 * self.weeks
+
+        # Add empty seconds
+        for i in range(run_time - (len(self.students) * self.weeks * self.students[0].views_per_week)):
+            self.schedule.append(None)
+
+        # Add students
+        for student in self.students:
+            for i in range(student.views_per_week * self.weeks):
+                self.schedule.append(student)
+
+        # Randomize
+        shuffle(self.schedule)
+
+    def create_schedule(self, arrival_sd=300):
         """Only simultates weeks at a time.
 
         Attempt to create a "realistic" schedule where students are randomly assigned
@@ -109,17 +133,21 @@ class SignViewingSimulator:
         chosen randomly, but this time will be consistent week to week.
         """
         self.schedule = []
+        # Day, night, mix schedules are represented by a list of possible
+        # arrival times in seconds of a day on the hour.
+        # daytime:   28800 - 57600 (08:00 - 16:00)
+        # nighttime: 61200 - 79200 (17:00 - 22:00)
+        # mix:       32400 - 79200 (09:00 - 22:00)
+        daytime = []
+        for hour in range(8, 17):
+            daytime.append(hour * 3600)
+        nighttime = []
+        for hour in range(17, 23):
+            nighttime.append(hour * 3600)
+        mix = daytime + nighttime
 
         # Create student schedules.
         for student in self.students:
-            # Day, night, mix schedules are represented by a list of possible
-            # arrival times in seconds of a day on the hour.
-            # daytime:   32400 - 57600 (09:00 - 16:00)
-            # nighttime: 61200 - 79200 (17:00 - 22:00)
-            # mix:       32400 - 79200 (09:00 - 22:00)
-            daytime = [32400, 36000, 39600, 43200, 46800, 50400, 54000, 57600]
-            nighttime = [61200, 64800, 68400, 72000, 75600, 79200]
-            mix = daytime + nighttime
             # Assign which days a student will arrive every week.
             student_days = []
             weekdays = [1, 2, 3, 4, 5, 6, 7]
@@ -135,7 +163,6 @@ class SignViewingSimulator:
             student_days.sort()
             # Create arrival times in seconds of a week. These serve as times
             # to aim for but will vary by several minutes from week to week.
-            student.schedule = []
             arrival_times = choice([daytime, nighttime, mix])
             for day in student_days:
                 if len(student_days) <= 7:
@@ -156,7 +183,7 @@ class SignViewingSimulator:
             for student in self.students:
                 for time in student.schedule:
                     # Arriving early or late in seconds. Default of 5 minutes sd.
-                    variance = int(random.normal(0, sd))
+                    variance = int(random.normal(0, arrival_sd))
                     new_time = time + variance
                     # In cases where a time was randomly determined and the variance
                     # pushed it over into the next week, time will be without variance.
@@ -191,7 +218,7 @@ class SignViewingSimulator:
             # Add students to road.
             if self.schedule[second] is not None:
                 road.append(self.schedule[second])
-                # Store arrival time.
+                # Record arrival time.
                 self.schedule[second].get_arrival_time(second)
 
             for student in road:

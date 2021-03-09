@@ -1,5 +1,5 @@
 # TheSignOutFront by nonetypes
-# Last Revised on 03/05/2021
+# Last Revised on 03/08/2021
 # Sign viewing simulator
 #
 # A sign cylces through a certain number of slides.

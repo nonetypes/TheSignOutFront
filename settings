@@ -1,1 +1,1 @@
-{"slide_num": 20, "slide_time": 20, "student_num": 1000, "student_time": 60, "student_views": 4, "simulation_num": 10, "simulation_time": 1}
+{"slide_num": 20, "slide_time": 20, "student_num": 1000, "student_time": 60, "student_views": 4, "simulation_num": 1, "simulation_time": 1, "sd_student_time": 5, "sd_student_arrival": 300, "slides_random": false, "students_random": false}
