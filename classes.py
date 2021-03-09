@@ -1,5 +1,5 @@
-# Contains Classes for TheSignOutFront
-# Student, Sign, SignViewingSimulator
+# Contains primary classes for TheSignOutFront
+# Sign, Student, SignViewingSimulator
 
 from random import choice, randint, shuffle
 from numpy import random
@@ -50,10 +50,10 @@ class Student:
         """
         if self.view_time >= 2 and not self.slide_seen:
             self.slide_seen = True
-            if slide not in self.slides_seen:
-                self.slides_seen[slide] = 1
+            if slide.item not in self.slides_seen:
+                self.slides_seen[slide.item] = 1
             else:
-                self.slides_seen[slide] += 1
+                self.slides_seen[slide.item] += 1
 
     def get_arrival_time(self, time_in_seconds):
         """For confirmation that student schedules are functioning as intended.
@@ -88,32 +88,36 @@ class SignViewingSimulator:
     Create schedules for students and a schedule for the simulation itself.
     Run simulation and calculate results.
     """
-    def __init__(self, sign, list_of_students, duration_in_weeks):
+    def __init__(self, sign, list_of_students, duration_in_weeks, thread=None):
         self.sign = sign
         self.students = list_of_students
         self.weeks = duration_in_weeks
+        self.thread = thread
         self.schedule = []
         self.results = {'Students': {}, 'Averages': {}}
 
     def create_random_schedule(self):
-        """Create a completely randomized schedule.
+        """Create a randomized schedule.
+
+        Students will still drive by the sign a consistent number of times per week.
 
         Warning: Students may have a greater chance to appear on the road with themselves.
         """
-        self.schedule = []
-        run_time = 60 * 60 * 24 * 7 * self.weeks
+        week_in_seconds = 60 * 60 * 24 * 7
 
-        # Add empty seconds
-        for i in range(run_time - (len(self.students) * self.weeks * self.students[0].views_per_week)):
-            self.schedule.append(None)
+        for week in range(self.weeks):
+            schedule = []
+            # Add empty seconds (Nones) to schedule
+            for i in range(week_in_seconds - (len(self.students) * self.students[0].views_per_week)):
+                schedule.append(None)
 
-        # Add students
-        for student in self.students:
-            for i in range(student.views_per_week * self.weeks):
-                self.schedule.append(student)
+            # Add students
+            for student in self.students:
+                for i in range(student.views_per_week):
+                    schedule.append(student)
 
-        # Randomize
-        shuffle(self.schedule)
+            shuffle(schedule)
+            self.schedule += schedule
 
     def create_schedule(self, arrival_sd=300):
         """Only simultates weeks at a time.
@@ -132,7 +136,6 @@ class SignViewingSimulator:
         If students will be coming to campus more than 7 times per week, a time is
         chosen randomly, but this time will be consistent week to week.
         """
-        self.schedule = []
         # Day, night, mix schedules are represented by a list of possible
         # arrival times in seconds of a day on the hour.
         # daytime:   28800 - 57600 (08:00 - 16:00)
@@ -148,6 +151,9 @@ class SignViewingSimulator:
 
         # Create student schedules.
         for student in self.students:
+            # Interrupt simulation when cancel is pressed.
+            if self.canceled():
+                return
             # Assign which days a student will arrive every week.
             student_days = []
             weekdays = [1, 2, 3, 4, 5, 6, 7]
@@ -181,6 +187,9 @@ class SignViewingSimulator:
                 schedule.append(None)
             # Replace Nones with students.
             for student in self.students:
+                # Interrupt simulation when cancel is pressed.
+                if self.canceled():
+                    return
                 for time in student.schedule:
                     # Arriving early or late in seconds. Default of 5 minutes sd.
                     variance = int(random.normal(0, arrival_sd))
@@ -214,6 +223,10 @@ class SignViewingSimulator:
         current_slide = self.sign.slides.head
         road = []
         for second in range(len(self.schedule)):
+
+            # Interrupt simulation when cancel is pressed.
+            if self.canceled():
+                return
 
             # Add students to road.
             if self.schedule[second] is not None:
@@ -268,3 +281,14 @@ class SignViewingSimulator:
         self.results['Averages']['Average Unique Slides Viewed'] = round(unique_slides_viewed / len(self.students), 2)
         self.results['Averages']['Average # of Slides Viewed'] = round(num_of_slides_viewed / len(self.students), 2)
         self.results['Averages']['Average % of Slides Viewed'] = round(per_of_slides_viewed / len(self.students), 2)
+
+    def canceled(self):
+        """Interrupt simulation when cancel button is pressed.
+
+        Placed periodically within schedule building and simulation where
+        simulation can take long periods of time due to certain parameter entries.
+        """
+        if self.thread and self.thread.canceled.is_set():
+            return True
+        else:
+            return False

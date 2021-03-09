@@ -4,11 +4,12 @@
 import tkinter as tk
 from threading import Thread, Event
 from json import loads, dumps
+from random import shuffle
 from classes import Sign, Student, SignViewingSimulator
 
 
 class SignSimulatorWindow:
-    """Tkinter window for entering simulation parameters and running simulations.
+    """Tkinter window for entering simulation parameters and running simulations for TheSignOutFront.
     """
     def __init__(self):
         self.window = tk.Tk()
@@ -61,7 +62,7 @@ class SignSimulatorWindow:
                                            validate='key', validatecommand=(vcmd, '%P'))
         self.students_num_entry.grid(row=0, column=1, padx=self.padx, pady=self.pady, sticky='w')
         # Students View Time
-        self.students_time_label = tk.Label(self.students_frame, text='View Duration',
+        self.students_time_label = tk.Label(self.students_frame, text='View Time in Seconds',
                                             width=self.label_width, anchor='w')
         self.students_time_label.grid(row=1, column=0, padx=self.padx, pady=self.pady, sticky='w')
         self.students_time_entry = tk.Entry(self.students_frame, width=self.entry_width,
@@ -84,15 +85,15 @@ class SignSimulatorWindow:
         # Standard Deviations Frame
         self.sd_frame = tk.LabelFrame(self.window, text='Standard Deviations')
         self.sd_frame.grid(row=2, column=0, padx=self.padx, pady=self.pady, columnspan=2, sticky='w')
-        # Standard Deviation Student Arrival Time
-        self.sd_student_time_label = tk.Label(self.sd_frame, text='View Duration',
+        # Standard Deviation Student View Time
+        self.sd_student_time_label = tk.Label(self.sd_frame, text='View Time in Seconds',
                                          width=self.label_width, anchor='w')
         self.sd_student_time_label.grid(row=0, column=0, padx=self.padx, pady=self.pady, sticky='w')
         self.sd_student_time_entry = tk.Entry(self.sd_frame, width=self.entry_width,
                                          validate='key', validatecommand=(vcmd, '%P'))
         self.sd_student_time_entry.grid(row=0, column=1, padx=self.padx, pady=self.pady, sticky='w')
         # Standard Deviation Student Arrival Time
-        self.sd_student_arrival_label = tk.Label(self.sd_frame, text='Late/Early Arrival Time',
+        self.sd_student_arrival_label = tk.Label(self.sd_frame, text='Early/Late Arrival Time',
                                          width=self.label_width, anchor='w')
         self.sd_student_arrival_label.grid(row=1, column=0, padx=self.padx, pady=self.pady, sticky='w')
         self.sd_student_arrival_entry = tk.Entry(self.sd_frame, width=self.entry_width,
@@ -134,7 +135,7 @@ class SignSimulatorWindow:
 
         # In the event that simulations are still running when window is closed, cancel them.
         if self.thread:
-            self.thread.finished.set()
+            self.thread.canceled.set()
 
         # Save most recent entries to settings upon close.
         self.save_settings()
@@ -164,9 +165,10 @@ class SignSimulatorWindow:
         """
         self.get_entries()
 
-        simulations = {'Average Unique Slides Viewed': [],
-                       'Average # of Slides Viewed': [],
-                       'Average % of Slides Viewed': []}
+        # Collect averages from every simulation that is run.
+        simulations_results = {'Average Unique Slides Viewed': [],
+                               'Average # of Slides Viewed': [],
+                               'Average % of Slides Viewed': []}
 
         # Print "n Simulations:"
         simulation_string = f"{self.entries['simulation_num']} Simulation"
@@ -180,7 +182,7 @@ class SignSimulatorWindow:
         for n in range(self.entries['simulation_num']):
 
             # Interrupt simulations when cancel is pressed or window is closed.
-            if self.thread and self.thread.finished.is_set():
+            if self.thread and self.thread.canceled.is_set():
                 print('Simulations Canceled')
                 return
 
@@ -195,7 +197,7 @@ class SignSimulatorWindow:
                                         self.entries['student_views']))
 
             # Create and run simulation.
-            simulation = SignViewingSimulator(sign, students, self.entries['simulation_time'])
+            simulation = SignViewingSimulator(sign, students, self.entries['simulation_time'], self.thread)
             if self.entries['students_random']:
                 simulation.create_random_schedule()
             else:
@@ -203,19 +205,25 @@ class SignSimulatorWindow:
             simulation.simulate(random_slides=self.entries['slides_random'])
             simulation.calculate_results()
 
+            # Check again if simulation was canceled while it was running.
+            if self.thread and self.thread.canceled.is_set():
+                print('Simulations Canceled')
+                return
+
             # Collect results.
             for key, val in simulation.results['Averages'].items():
-                simulations[key].append(val)
+                simulations_results[key].append(val)
 
             # print(len(simulation.schedule))
 
         # Print average results across any/all simulations.
-        for key, val in simulations.items():
-            print(f'{key}: {round((sum(val) / len(val)), 2)}')
+        results_string = ''
+        for key, val in simulations_results.items():
+            results_string += f'{key}: {round((sum(val) / len(val)), 2)}\n'
+        print(results_string[:-1])
 
-        # for student in students:
-        #     print(student.arrival_times)
-        #     print(student.slides_seen)
+        # Write results to results.txt
+        self.write_results(simulation, results_string)
 
         if self.entries['simulation_num'] == 1:
             self.status_label.configure(text='Simulation Complete')
@@ -226,7 +234,7 @@ class SignSimulatorWindow:
         """Execute run() when the "Run" button is pressed.
 
         run() is threaded to allow real-time updating of status messages and
-        the ability to cancel the execution of simulations.
+        the ability to cancel the execution of numerous simulations.
 
         While run() is running, "Run" button is replaced with "Cancel".
         check_thread() determines when thread is complete and reconfigures
@@ -235,8 +243,8 @@ class SignSimulatorWindow:
         https://stackoverflow.com/a/56953613
         """
         self.thread = Thread(target=self.run)
-        # Create an event flag so thread can be interrupted.
-        self.thread.finished = Event()
+        # Create an event flag so thread can be interrupted. It is initially false.
+        self.thread.canceled = Event()
         self.thread.start()
 
         # Reconfigure "Run" button to "Cancel". Unbind enter key.
@@ -262,12 +270,12 @@ class SignSimulatorWindow:
         """Called when "Cancel" button is pressed.
 
         Sets the thread's event flag to true. This is checked before every simulation is run,
-        breaking out of function when found to be true.
+        returning out of function when found to be true.
 
         Reset "Run" button and rebind enter key.
         """
         print('Canceling Simulations')
-        self.thread.finished.set()
+        self.thread.canceled.set()
         self.simulation_run_button.configure(text='Run', command=self.start_thread)
         self.window.bind('<Return>', self.enter_key)
         self.status_label.configure(text='Canceled')
@@ -287,10 +295,10 @@ class SignSimulatorWindow:
         entry_boxes['student_num'] = self.students_num_entry
         entry_boxes['student_time'] = self.students_time_entry
         entry_boxes['student_views'] = self.students_views_entry
-        entry_boxes['simulation_num'] = self.simulation_num_entry
-        entry_boxes['simulation_time'] = self.simulation_time_entry
         entry_boxes['sd_student_time'] = self.sd_student_time_entry
         entry_boxes['sd_student_arrival'] = self.sd_student_arrival_entry
+        entry_boxes['simulation_time'] = self.simulation_time_entry
+        entry_boxes['simulation_num'] = self.simulation_num_entry
 
         # Collect user entries.
         entries = {}
@@ -299,6 +307,7 @@ class SignSimulatorWindow:
 
         # Typecast to integers.
         for key, val in entries.items():
+            # Standard Deviations are defaulted to 0.
             if key in ['sd_student_time', 'sd_student_arrival']:
                 if not val:
                     entries[key] = 0
@@ -321,6 +330,12 @@ class SignSimulatorWindow:
         entries['slides_random'] = self.sign_random_var.get()
         entries['students_random'] = self.students_random_var.get()
 
+        # Impose limitation on slides to prevent hanging.
+        if entries['slide_num'] > 10000:
+            entries['slide_num'] = 9999
+            self.sign_num_entry.delete(0, 'end')
+            self.sign_num_entry.insert(0, 9999)
+
         # Limitation on number of students/views per week to
         # avoid infinite loops when creating simulation schedule.
         if entries['student_num'] * entries['student_views'] >= 600_000:
@@ -333,6 +348,12 @@ class SignSimulatorWindow:
                 entries['student_views'] = 10
                 self.students_views_entry.delete(0, 'end')
                 self.students_views_entry.insert(0, str(100))
+
+        # Limitation on early/late arrival time standard deviation to avoid index out of range error.
+        if entries['sd_student_arrival'] > 100000:
+            entries['sd_student_arrival'] = 100000
+            self.sd_student_arrival_entry.delete(0, 'end')
+            self.sd_student_arrival_entry.insert(0, str(100000))
 
         self.entries = entries
 
@@ -371,3 +392,69 @@ class SignSimulatorWindow:
                 print(f'Settings not saved: {error}')
             else:
                 print('Settings saved successfully.')
+
+    def write_results(self, simulation, all_results_string):
+        """Format and write various results to results.txt
+
+        Parameters, averages, and a sampling of 10 random students are formatted and written.
+        """
+        string = ''
+
+        # Simulation Parameters
+        readable_params = {'slide_num': 'Number of Slides', 'slide_time': 'Seconds Per Slide',
+                           'student_num': 'Number of Students', 'student_time': 'Viewing Time',
+                           'student_views': 'Views Per Week', 'sd_student_time': 'Viewing Time SD',
+                           'sd_student_arrival': 'Early/Late Arrival Time SD', 'simulation_time': 'Duration in Weeks',
+                           'simulation_num': 'Number of Simulations', 'slides_random': 'Random Slides',
+                           'students_random': 'Random Student Schedules'}
+        string += 'Simulation Parameters:\n'
+        for key, val in self.entries.items():
+            string += f'{readable_params[key]}: {val}\n'
+
+        # Total averages
+        string += '\nAll Simulations:\n'
+        string += all_results_string
+
+        # Averages from last simulation
+        if self.entries['simulation_num'] > 1:
+            string += '\nMost Recent Simulation:\n'
+            for key, val in simulation.results['Averages'].items():
+                string += f'{key}: {val}\n'
+
+        # Individualized data -- Randomize and use first 10 students.
+        shuffle(simulation.students)
+        string += '\nStudent Sampling From Most Recent Simulation:\n'
+        for student in simulation.students[:10]:
+            string += f'Student {str(student).zfill(len(str(len(simulation.students))))}: '
+            for key, val in simulation.results["Students"][student].items():
+                string += f'{key}: {val}, '
+            string = string[:-2]+'\n'
+
+        # Slides seen by individual students
+        string += '\nSlides Seen:\n'
+        for student in simulation.students[:10]:
+            string += f'Student {str(student).zfill(len(str(len(simulation.students))))}: '
+            slides_seen = []
+            for key, val in student.slides_seen.items():
+                slides_seen.append(f'{key}: {val}')
+            string += ', '.join(slides_seen)+'\n'
+
+        # Arrival Times
+        string += '\nArrival Times:\n'
+        for student in simulation.students[:10]:
+            string += f'Student {str(student).zfill(len(str(len(simulation.students))))}:\n'
+            # Divide total arrival times by simulation weeks and put each on a new line for readablity in txt file.
+            arrivals = student.arrival_times[:]
+            for week in range(simulation.weeks):
+                weekly_arrivals = []
+                for i in range(int(len(student.arrival_times) / simulation.weeks)):
+                    weekly_arrivals.append(arrivals.pop(0))
+                string += f'Week {week + 1} Arrival Times: {"; ".join(weekly_arrivals)}\n'
+
+        try:
+            with open('results.txt', 'w') as stream:
+                stream.write(string)
+        except Exception as error:
+            print(f'Failed to write results to results.txt: {error}')
+        else:
+            print('Results written to results.txt')
