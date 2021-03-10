@@ -17,7 +17,6 @@ class SignSimulatorWindow:
         self.entries = {}
         self.thread = None
 
-        self.window.geometry('293x470')
         self.padx = 2
         self.pady = 2
         self.entry_width = 14
