@@ -1,0 +1,80 @@
+Simulation Parameters:
+Number of Slides: 20
+Seconds Per Slide: 20
+Number of Students: 1000
+Viewing Time: 60
+Views Per Week: 4
+Viewing Time SD: 5
+Early/Late Arrival Time SD: 300
+Duration in Weeks: 2
+Number of Simulations: 1000
+Random Slides: False
+Random Student Schedules: False
+
+All Simulations:
+Median of Unique Slides Viewed: 16.69
+Average Unique Slides Viewed: 16.38
+Average # of Slides Viewed: 30.91
+Average % of Slides Viewed: 81.92
+
+Most Recent Simulation:
+Median of Unique Slides Viewed: 16
+Average Unique Slides Viewed: 16.29
+Average # of Slides Viewed: 30.91
+Average % of Slides Viewed: 81.46
+
+Student Sampling From Most Recent Simulation:
+Student 0684: Unique Slides Viewed: 17, Total Slides Viewed: 32, % of Slides Viewed: 85.0
+Student 0920: Unique Slides Viewed: 20, Total Slides Viewed: 29, % of Slides Viewed: 100.0
+Student 0344: Unique Slides Viewed: 15, Total Slides Viewed: 32, % of Slides Viewed: 75.0
+Student 0267: Unique Slides Viewed: 19, Total Slides Viewed: 37, % of Slides Viewed: 95.0
+Student 0835: Unique Slides Viewed: 13, Total Slides Viewed: 29, % of Slides Viewed: 65.0
+Student 0478: Unique Slides Viewed: 17, Total Slides Viewed: 31, % of Slides Viewed: 85.0
+Student 0815: Unique Slides Viewed: 12, Total Slides Viewed: 26, % of Slides Viewed: 60.0
+Student 0848: Unique Slides Viewed: 19, Total Slides Viewed: 32, % of Slides Viewed: 95.0
+Student 0723: Unique Slides Viewed: 14, Total Slides Viewed: 30, % of Slides Viewed: 70.0
+Student 0854: Unique Slides Viewed: 11, Total Slides Viewed: 31, % of Slides Viewed: 55.0
+
+Slides Seen:
+Student 0684: Slide 17: 1, Slide 18: 1, Slide 19: 3, Slide 20: 3, Slide 12: 3, Slide 13: 2, Slide 14: 2, Slide 15: 2, Slide 3: 2, Slide 4: 2, Slide 5: 2, Slide 6: 1, Slide 1: 2, Slide 2: 3, Slide 9: 1, Slide 10: 1, Slide 11: 1
+Student 0920: Slide 5: 1, Slide 6: 1, Slide 7: 2, Slide 10: 1, Slide 11: 1, Slide 12: 1, Slide 13: 1, Slide 14: 2, Slide 15: 3, Slide 16: 3, Slide 17: 3, Slide 8: 1, Slide 9: 1, Slide 19: 1, Slide 20: 1, Slide 1: 2, Slide 18: 1, Slide 2: 1, Slide 3: 1, Slide 4: 1
+Student 0344: Slide 10: 2, Slide 11: 3, Slide 12: 4, Slide 13: 4, Slide 14: 4, Slide 15: 3, Slide 16: 2, Slide 17: 3, Slide 18: 1, Slide 19: 1, Slide 20: 1, Slide 2: 1, Slide 3: 1, Slide 4: 1, Slide 5: 1
+Student 0267: Slide 19: 2, Slide 20: 2, Slide 1: 3, Slide 2: 3, Slide 3: 3, Slide 12: 2, Slide 13: 3, Slide 14: 2, Slide 15: 2, Slide 9: 2, Slide 10: 2, Slide 11: 1, Slide 4: 2, Slide 5: 2, Slide 16: 1, Slide 6: 2, Slide 7: 1, Slide 8: 1, Slide 18: 1
+Student 0835: Slide 5: 3, Slide 6: 4, Slide 7: 4, Slide 17: 2, Slide 18: 2, Slide 19: 2, Slide 20: 1, Slide 8: 3, Slide 13: 2, Slide 14: 2, Slide 15: 2, Slide 16: 1, Slide 12: 1
+Student 0478: Slide 15: 3, Slide 16: 2, Slide 17: 2, Slide 10: 3, Slide 11: 3, Slide 12: 4, Slide 13: 3, Slide 5: 1, Slide 6: 1, Slide 7: 1, Slide 8: 1, Slide 1: 1, Slide 2: 1, Slide 3: 1, Slide 4: 1, Slide 14: 2, Slide 9: 1
+Student 0815: Slide 18: 3, Slide 19: 4, Slide 20: 5, Slide 1: 3, Slide 4: 1, Slide 5: 1, Slide 6: 1, Slide 12: 2, Slide 13: 2, Slide 14: 2, Slide 2: 1, Slide 15: 1
+Student 0848: Slide 6: 1, Slide 7: 1, Slide 8: 3, Slide 9: 3, Slide 15: 1, Slide 16: 2, Slide 17: 2, Slide 18: 2, Slide 19: 2, Slide 1: 2, Slide 2: 2, Slide 3: 1, Slide 4: 1, Slide 10: 2, Slide 11: 3, Slide 20: 1, Slide 12: 1, Slide 13: 1, Slide 14: 1
+Student 0723: Slide 5: 4, Slide 6: 3, Slide 7: 2, Slide 8: 2, Slide 3: 3, Slide 4: 3, Slide 10: 3, Slide 11: 3, Slide 12: 2, Slide 13: 1, Slide 20: 1, Slide 1: 1, Slide 2: 1, Slide 9: 1
+Student 0854: Slide 18: 3, Slide 19: 4, Slide 20: 6, Slide 1: 6, Slide 2: 4, Slide 3: 3, Slide 6: 1, Slide 7: 1, Slide 8: 1, Slide 16: 1, Slide 17: 1
+
+Arrival Times:
+Student 0684:
+Week 1 Arrival Times: 1, Mon, 21:05:26; 1, Thu, 17:10:33; 1, Sat, 18:03:40; 1, Sun, 21:54:07
+Week 2 Arrival Times: 2, Mon, 20:59:22; 2, Thu, 16:56:13; 2, Sat, 18:00:24; 2, Sun, 22:06:17
+Student 0920:
+Week 1 Arrival Times: 1, Wed, 11:14:40; 1, Fri, 09:03:19; 1, Sat, 11:57:57; 1, Sun, 08:08:40
+Week 2 Arrival Times: 2, Wed, 11:06:03; 2, Fri, 08:58:14; 2, Sat, 11:57:55; 2, Sun, 08:00:19
+Student 0344:
+Week 1 Arrival Times: 1, Mon, 20:03:18; 1, Tue, 13:04:37; 1, Fri, 17:05:34; 1, Sun, 21:07:10
+Week 2 Arrival Times: 2, Mon, 20:03:51; 2, Tue, 12:56:28; 2, Fri, 16:57:45; 2, Sun, 20:50:12
+Student 0267:
+Week 1 Arrival Times: 1, Mon, 16:59:33; 1, Tue, 19:03:40; 1, Thu, 17:02:55; 1, Fri, 21:00:17
+Week 2 Arrival Times: 2, Mon, 16:57:24; 2, Tue, 18:55:15; 2, Thu, 16:59:14; 2, Fri, 21:00:45
+Student 0835:
+Week 1 Arrival Times: 1, Tue, 21:54:42; 1, Wed, 21:52:13; 1, Thu, 18:01:41; 1, Sat, 19:01:38
+Week 2 Arrival Times: 2, Tue, 22:01:38; 2, Wed, 21:50:51; 2, Thu, 18:05:23; 2, Sat, 19:03:52
+Student 0478:
+Week 1 Arrival Times: 1, Mon, 18:04:42; 1, Tue, 18:56:33; 1, Thu, 19:56:31; 1, Sun, 19:48:18
+Week 2 Arrival Times: 2, Mon, 18:06:43; 2, Tue, 19:03:58; 2, Thu, 19:57:55; 2, Sun, 20:02:51
+Student 0815:
+Week 1 Arrival Times: 1, Tue, 07:59:02; 1, Thu, 09:59:18; 1, Fri, 15:12:20; 1, Sat, 08:01:02
+Week 2 Arrival Times: 2, Tue, 08:06:02; 2, Thu, 09:57:03; 2, Fri, 14:53:08; 2, Sat, 07:57:08
+Student 0848:
+Week 1 Arrival Times: 1, Tue, 21:01:53; 1, Thu, 17:51:24; 1, Sat, 20:05:11; 1, Sun, 22:00:02
+Week 2 Arrival Times: 2, Tue, 20:55:57; 2, Thu, 18:02:39; 2, Sat, 19:52:57; 2, Sun, 21:56:43
+Student 0723:
+Week 1 Arrival Times: 1, Mon, 16:54:48; 1, Wed, 18:47:34; 1, Sat, 20:54:02; 1, Sun, 16:56:27
+Week 2 Arrival Times: 2, Mon, 16:59:45; 2, Wed, 19:01:04; 2, Sat, 20:55:50; 2, Sun, 17:03:02
+Student 0854:
+Week 1 Arrival Times: 1, Wed, 21:59:13; 1, Fri, 18:06:32; 1, Sat, 19:06:28; 1, Sun, 18:59:46
+Week 2 Arrival Times: 2, Wed, 22:01:40; 2, Fri, 17:59:27; 2, Sat, 18:59:13; 2, Sun, 19:05:03

@@ -17,6 +17,7 @@ class SignSimulatorWindow:
         self.entries = {}
         self.thread = None
 
+        # Padding for for tkinter objects.
         self.padx = 2
         self.pady = 2
         self.entry_width = 14
@@ -83,20 +84,20 @@ class SignSimulatorWindow:
 
         # Standard Deviations Frame
         self.sd_frame = tk.LabelFrame(self.window, text='Standard Deviations')
-        self.sd_frame.grid(row=2, column=0, padx=self.padx, pady=self.pady, columnspan=2, sticky='w')
+        self.sd_frame.grid(row=2, column=0, padx=4, pady=4, columnspan=2, sticky='w')
         # Standard Deviation Student View Time
         self.sd_student_time_label = tk.Label(self.sd_frame, text='View Time in Seconds',
-                                         width=self.label_width, anchor='w')
+                                              width=self.label_width, anchor='w')
         self.sd_student_time_label.grid(row=0, column=0, padx=self.padx, pady=self.pady, sticky='w')
         self.sd_student_time_entry = tk.Entry(self.sd_frame, width=self.entry_width,
-                                         validate='key', validatecommand=(vcmd, '%P'))
+                                              validate='key', validatecommand=(vcmd, '%P'))
         self.sd_student_time_entry.grid(row=0, column=1, padx=self.padx, pady=self.pady, sticky='w')
         # Standard Deviation Student Arrival Time
         self.sd_student_arrival_label = tk.Label(self.sd_frame, text='Early/Late Arrival Time',
-                                         width=self.label_width, anchor='w')
+                                                 width=self.label_width, anchor='w')
         self.sd_student_arrival_label.grid(row=1, column=0, padx=self.padx, pady=self.pady, sticky='w')
         self.sd_student_arrival_entry = tk.Entry(self.sd_frame, width=self.entry_width,
-                                         validate='key', validatecommand=(vcmd, '%P'))
+                                                 validate='key', validatecommand=(vcmd, '%P'))
         self.sd_student_arrival_entry.grid(row=1, column=1, padx=self.padx, pady=self.pady, sticky='w')
 
         # Simulation Frame
@@ -139,33 +140,16 @@ class SignSimulatorWindow:
         # Save most recent entries to settings upon close.
         self.save_settings()
 
-    def validate_digit(self, entry):
-        """Digit validation for tkinter entry boxes.
-
-        Will only allow digits to be entered in entry boxes.
-        """
-        if str(entry).isdigit() or entry == "":
-            return True
-        else:
-            return False
-
-    def toggle_random_slides(self):
-        """Print state of sign_random_var when random slides checkbox is clicked.
-        """
-        print(f'Random slides set to {self.sign_random_var.get()}')
-
-    def toggle_random_students(self):
-        """Print state of studends_random_var when random student schedules checkbox is clicked.
-        """
-        print(f'Random student schedules set to {self.students_random_var.get()}')        
-
     def run(self):
-        """Run the simulation(s) from the entered parameters in the entry boxes.
+        """Run simulation(s) based on the user entered parameters from the entry boxes.
+
+        Threaded with self.start_thread()
         """
         self.get_entries()
 
         # Collect averages from every simulation that is run.
-        simulations_results = {'Average Unique Slides Viewed': [],
+        simulations_results = {'Median of Unique Slides Viewed': [],
+                               'Average Unique Slides Viewed': [],
                                'Average # of Slides Viewed': [],
                                'Average % of Slides Viewed': []}
 
@@ -210,7 +194,7 @@ class SignSimulatorWindow:
                 return
 
             # Collect results.
-            for key, val in simulation.results['Averages'].items():
+            for key, val in simulation.results['Totals'].items():
                 simulations_results[key].append(val)
 
             # print(len(simulation.schedule))
@@ -228,61 +212,6 @@ class SignSimulatorWindow:
             self.status_label.configure(text='Simulation Complete')
         else:
             self.status_label.configure(text='Simulations Complete')
-
-    def start_thread(self):
-        """Execute run() when the "Run" button is pressed.
-
-        run() is threaded to allow real-time updating of status messages and
-        the ability to cancel the execution of numerous simulations.
-
-        While run() is running, "Run" button is replaced with "Cancel".
-        check_thread() determines when thread is complete and reconfigures
-        run button.
-
-        https://stackoverflow.com/a/56953613
-        """
-        self.thread = Thread(target=self.run)
-        # Create an event flag so thread can be interrupted. It is initially false.
-        self.thread.canceled = Event()
-        self.thread.start()
-
-        # Reconfigure "Run" button to "Cancel". Unbind enter key.
-        self.simulation_run_button.configure(text='Cancel', command=self.cancel_thread)
-        self.window.unbind('<Return>')
-
-        # Repeatedly check if thread is completed, reconfiguring "Run" button when it is.
-        self.check_thread()
-
-    def check_thread(self):
-        """Used in self.start_thread() to check if simulations have completed,
-        reconfiguring "Run" button to allow simulations to be run again.
-
-        If the thread is active, call check_thread() again after .1 seconds.
-        """
-        if self.thread.is_alive():
-            self.window.after(100, self.check_thread)
-        else:
-            self.simulation_run_button.configure(text='Run', command=self.start_thread)
-            self.window.bind('<Return>', self.enter_key)
-
-    def cancel_thread(self):
-        """Called when "Cancel" button is pressed.
-
-        Sets the thread's event flag to true. This is checked before every simulation is run,
-        returning out of function when found to be true.
-
-        Reset "Run" button and rebind enter key.
-        """
-        print('Canceling Simulations')
-        self.thread.canceled.set()
-        self.simulation_run_button.configure(text='Run', command=self.start_thread)
-        self.window.bind('<Return>', self.enter_key)
-        self.status_label.configure(text='Canceled')
-
-    def enter_key(self, event):
-        """For binding the enter key to start_thread() and ultimately run().
-        """
-        self.start_thread()
 
     def get_entries(self):
         """Retrieve and store the entries from the entry boxes.
@@ -356,42 +285,6 @@ class SignSimulatorWindow:
 
         self.entries = entries
 
-    def load_settings(self):
-        """Attempt to load settings and apply entries to entry boxes.
-
-        Called during initialization.
-        """
-        try:
-            settings = loads(open('settings', 'r').read())
-        except Exception:
-            print('No settings file found.')
-        else:
-            self.sign_num_entry.insert(0, str(settings['slide_num']))
-            self.sign_time_entry.insert(0, str(settings['slide_time']))
-            self.students_num_entry.insert(0, str(settings['student_num']))
-            self.students_time_entry.insert(0, str(settings['student_time']))
-            self.students_views_entry.insert(0, str(settings['student_views']))
-            self.simulation_num_entry.insert(0, str(settings['simulation_num']))
-            self.simulation_time_entry.insert(0, str(settings['simulation_time']))
-            self.sd_student_time_entry.insert(0, str(settings['sd_student_time']))
-            self.sd_student_arrival_entry.insert(0, str(settings['sd_student_arrival']))
-            self.sign_random_var.set(settings['slides_random'])
-            self.students_random_var.set(settings['students_random'])
-
-    def save_settings(self):
-        """Save the last retrieved entries entered in entry boxes to settings file.
-
-        Called after tkinter window is closed.
-        """
-        if self.entries:
-            try:
-                with open('settings', 'w') as stream:
-                    stream.write(dumps(self.entries))
-            except Exception as error:
-                print(f'Settings not saved: {error}')
-            else:
-                print('Settings saved successfully.')
-
     def write_results(self, simulation, all_results_string):
         """Format and write various results to results.txt
 
@@ -417,7 +310,7 @@ class SignSimulatorWindow:
         # Averages from last simulation
         if self.entries['simulation_num'] > 1:
             string += '\nMost Recent Simulation:\n'
-            for key, val in simulation.results['Averages'].items():
+            for key, val in simulation.results['Totals'].items():
                 string += f'{key}: {val}\n'
 
         # Individualized data -- Randomize and use first 10 students.
@@ -457,3 +350,115 @@ class SignSimulatorWindow:
             print(f'Failed to write results to results.txt: {error}')
         else:
             print('Results written to results.txt')
+
+    def load_settings(self):
+        """Attempt to load settings.json and apply entries to entry boxes.
+
+        Called during initialization.
+        """
+        try:
+            settings = loads(open('settings.json', 'r').read())
+        except Exception:
+            print('No settings file found')
+        else:
+            self.sign_num_entry.insert(0, str(settings['slide_num']))
+            self.sign_time_entry.insert(0, str(settings['slide_time']))
+            self.students_num_entry.insert(0, str(settings['student_num']))
+            self.students_time_entry.insert(0, str(settings['student_time']))
+            self.students_views_entry.insert(0, str(settings['student_views']))
+            self.simulation_num_entry.insert(0, str(settings['simulation_num']))
+            self.simulation_time_entry.insert(0, str(settings['simulation_time']))
+            self.sd_student_time_entry.insert(0, str(settings['sd_student_time']))
+            self.sd_student_arrival_entry.insert(0, str(settings['sd_student_arrival']))
+            self.sign_random_var.set(settings['slides_random'])
+            self.students_random_var.set(settings['students_random'])
+
+    def save_settings(self):
+        """Save the last retrieved entries entered in entry boxes to settings.json file.
+
+        Called after tkinter window is closed.
+        """
+        if self.entries:
+            try:
+                with open('settings.json', 'w') as stream:
+                    stream.write(dumps(self.entries))
+            except Exception as error:
+                print(f'Settings not saved: {error}')
+            else:
+                print('Settings saved successfully')
+
+    def start_thread(self):
+        """Execute run() when the "Run" button is pressed.
+
+        run() is threaded to allow real-time updating of status messages and
+        the ability to cancel the execution of numerous simulations.
+
+        While run() is running, "Run" button is replaced with "Cancel".
+        check_thread() determines when thread is complete and reconfigures
+        run button.
+
+        https://stackoverflow.com/a/56953613
+        """
+        self.thread = Thread(target=self.run)
+        # Create an event flag so thread can be interrupted. It is initially false.
+        self.thread.canceled = Event()
+        self.thread.start()
+
+        # Reconfigure "Run" button to "Cancel". Unbind enter key.
+        self.simulation_run_button.configure(text='Cancel', command=self.cancel_thread)
+        self.window.unbind('<Return>')
+
+        # Repeatedly check if thread is completed, reconfiguring "Run" button when it is.
+        self.check_thread()
+
+    def check_thread(self):
+        """Used in self.start_thread() to check if simulations have completed,
+        reconfiguring "Run" button to allow simulations to be run again.
+
+        If the thread is active, call check_thread() again after .1 seconds.
+        """
+        if self.thread.is_alive():
+            self.window.after(100, self.check_thread)
+        else:
+            self.simulation_run_button.configure(text='Run', command=self.start_thread)
+            self.window.bind('<Return>', self.enter_key)
+
+    def cancel_thread(self):
+        """Called when "Cancel" button is pressed.
+
+        Sets the thread's event flag to true. This is checked before every
+        simulation is run, and in create_schedule() and simulate() from
+        SignViewingSimulator, returning out of function when found to be true.
+
+        Reset "Run" button and rebind enter key.
+        """
+        print('Canceling Simulations')
+        self.thread.canceled.set()
+        self.simulation_run_button.configure(text='Run', command=self.start_thread)
+        self.window.bind('<Return>', self.enter_key)
+        self.status_label.configure(text='Canceled')
+
+    def enter_key(self, event):
+        """For binding the enter key to start_thread() and ultimately run().
+        """
+        self.start_thread()
+
+    def validate_digit(self, entry):
+        """Digit validation for tkinter entry boxes.
+
+        Will only allow digits to be entered in entry boxes.
+        """
+        if str(entry).isdigit() or entry == "":
+            return True
+        else:
+            return False
+
+    def toggle_random_slides(self):
+        """Print state of sign_random_var when random slides checkbox is clicked.
+        """
+        print(f'Random slides set to {self.sign_random_var.get()}')
+
+    def toggle_random_students(self):
+        """Print state of studends_random_var when random student schedules checkbox is clicked.
+        """
+        print(f'Random student schedules set to {self.students_random_var.get()}')

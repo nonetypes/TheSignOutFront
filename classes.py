@@ -3,11 +3,14 @@
 
 from random import choice, randint, shuffle
 from numpy import random
+from statistics import median
 from linkedlist import LinkedList
 
 
 class Sign:
-    """Contains a circular LinkedList representing slides which
+    """Sign Object to be used in SignViewingSimulator
+
+    Contains a circular LinkedList representing slides which
     display in a loop.
 
     time_per_slide is in seconds.
@@ -26,7 +29,8 @@ class Sign:
 
 
 class Student:
-    """
+    """Student object to be used in SignViewingSimulator.
+
     drive_by_time is in seconds with a normal distribution standard deviation of 5
     to simulate variance in driving speeds.
     """
@@ -60,7 +64,7 @@ class Student:
 
         Convert seconds to a string of '2, Mon, 14:52:23' (week, day, time)
 
-        Add it to self.arrival_times.
+        Add it to self.arrival_times. Collected as students enter road.
         """
         day = 60 * 60 * 24
         week = day * 7
@@ -94,7 +98,7 @@ class SignViewingSimulator:
         self.weeks = duration_in_weeks
         self.thread = thread
         self.schedule = []
-        self.results = {'Students': {}, 'Averages': {}}
+        self.results = {'Students': {}, 'Totals': {}}
 
     def create_random_schedule(self):
         """Create a randomized schedule.
@@ -131,7 +135,7 @@ class SignViewingSimulator:
 
         Students will be assigned times on the hour of specific days in which they will arrive.
         This will be consistent week to week but they will likely arrive early
-        or late with a normal distribution standard deviation of 5 minutes.
+        or late with a normal distribution standard deviation of 5 minutes (default).
 
         If students will be coming to campus more than 7 times per week, a time is
         chosen randomly, but this time will be consistent week to week.
@@ -201,6 +205,8 @@ class SignViewingSimulator:
                     # Make sure the time slot is not already taken.
                     # Move forward in schedule until there isn't a student.
                     while schedule[new_time] is not None:
+                        if self.canceled():
+                            return
                         new_time += 1
                         # If time moves into next week, reset time.
                         if new_time >= 604800:
@@ -261,11 +267,17 @@ class SignViewingSimulator:
 
     def calculate_results(self):
         """Tally the results based on slides seen by all students.
+
+        Calculate averages and medians.
+
         Store results in self.results.
         """
         unique_slides_viewed = 0
         num_of_slides_viewed = 0
         per_of_slides_viewed = 0
+        median_unique_slides = []
+
+        # Create results for each student.
         for student in self.students:
             self.results['Students'][student] = {}
             self.results['Students'][student]['Unique Slides Viewed'] = len(student.slides_seen)
@@ -278,12 +290,16 @@ class SignViewingSimulator:
             per_of_slides_viewed += self.results['Students'][student]['% of Slides Viewed']
             num_of_slides_viewed += self.results['Students'][student]['Total Slides Viewed']
             unique_slides_viewed += self.results['Students'][student]['Unique Slides Viewed']
-        self.results['Averages']['Average Unique Slides Viewed'] = round(unique_slides_viewed / len(self.students), 2)
-        self.results['Averages']['Average # of Slides Viewed'] = round(num_of_slides_viewed / len(self.students), 2)
-        self.results['Averages']['Average % of Slides Viewed'] = round(per_of_slides_viewed / len(self.students), 2)
+            median_unique_slides.append(self.results['Students'][student]['Unique Slides Viewed'])
+
+        # Create averages and median
+        self.results['Totals']['Median of Unique Slides Viewed'] = int(median(median_unique_slides))
+        self.results['Totals']['Average Unique Slides Viewed'] = round(unique_slides_viewed / len(self.students), 2)
+        self.results['Totals']['Average # of Slides Viewed'] = round(num_of_slides_viewed / len(self.students), 2)
+        self.results['Totals']['Average % of Slides Viewed'] = round(per_of_slides_viewed / len(self.students), 2)
 
     def canceled(self):
-        """Interrupt simulation when cancel button is pressed.
+        """Boolean test to see if cancel button was pressed.
 
         Placed periodically within schedule building and simulation where
         simulation can take long periods of time due to certain parameter entries.
